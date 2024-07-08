@@ -396,7 +396,11 @@ Public Class MainUI
                         InvokeControl(LblProgress, Sub(x) x.Text = "暂停...")
                         InvokeControl(BtnPause, Sub(x) x.Text = "继续(&C)")
                         WriteLog("Task paused.")
-                        If AutoRestart >= 100 And DoNotAutoRestart = False Then
+                        If AutoRestart < 0 And DoNotAutoRestart = False Then
+                            WriteLog("Exit on error.")
+                            Dispose()
+                            End
+                        ElseIf AutoRestart >= 100 And DoNotAutoRestart = False Then
                             Invoke(New DlgAutoRestartInterval(AddressOf TmrAutoRestartInterval), New Object() {AutoRestart})
                             Invoke(New DlgAutoRestartEnable(AddressOf TmrAutoRestartEnable), New Object() {True})
                             WriteLog("Re-start has been scheduled after " & TmrAutoRestart.Interval & " (ms).")
@@ -422,14 +426,14 @@ Public Class MainUI
         End Try
     End Sub
 
-    Delegate Sub DlgAutoRestartEnable(ByVal param1 As Boolean)
-    Delegate Sub DlgAutoRestartInterval(ByVal param1 As Integer)
+    Delegate Sub DlgAutoRestartEnable(param1 As Boolean)
+    Delegate Sub DlgAutoRestartInterval(param1 As Integer)
 
-    Private Sub TmrAutoRestartEnable(ByVal param1 As Boolean)
+    Private Sub TmrAutoRestartEnable(param1 As Boolean)
         TmrAutoRestart.Enabled = param1
     End Sub
 
-    Private Sub TmrAutoRestartInterval(ByVal param1 As Integer)
+    Private Sub TmrAutoRestartInterval(param1 As Integer)
         TmrAutoRestart.Interval = param1
     End Sub
 
@@ -2118,7 +2122,7 @@ nxt:        Next
         End Try
     End Function
 
-    Public Sub WriteLog(ByVal Content As String)
+    Public Sub WriteLog(Content As String)
         Try
             Dim _loc_1 As New System.IO.StreamWriter(GetLogPath(), True, Encoding.Default)
             _loc_1.WriteLine("[" & Now & "]  " & Content)
@@ -2161,7 +2165,7 @@ nxt:        Next
         End Try
     End Sub
 
-    Public Shared Function GetRndString(ByVal lngNum As Long) As String
+    Public Shared Function GetRndString(lngNum As Long) As String
         GetRndString = ""
         Dim i As Long
         Dim intLength As Integer
@@ -2191,7 +2195,7 @@ nxt:        Next
         End Try
     End Function
 
-    Public Sub InvokeControl(Of T As Control)(ByVal Control As T, ByVal Action As Action(Of T))
+    Public Sub InvokeControl(Of T As Control)(Control As T, Action As Action(Of T))
         If Control.InvokeRequired Then
             Control.Invoke(New Action(Of T, Action(Of T))(AddressOf InvokeControl), New Object() {Control, Action})
         Else
@@ -2423,7 +2427,7 @@ nxt:        Next
         Return _loc_2 & "-" & _loc_4
     End Function
 
-    Public Function IsValidFileNameOrPath(ByVal param1 As String) As Boolean
+    Public Function IsValidFileNameOrPath(param1 As String) As Boolean
         If param1 Is Nothing Then
             Return False
         End If
