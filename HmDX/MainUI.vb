@@ -397,7 +397,7 @@ Public Class MainUI
                         InvokeControl(BtnPause, Sub(x) x.Text = "继续(&C)")
                         WriteLog("Task paused.")
                         If AutoRestart < 0 And DoNotAutoRestart = False Then
-                            WriteLog("Exit on error.")
+                            WriteLog("Exit on failure.")
                             Dispose()
                             End
                         ElseIf AutoRestart >= 100 And DoNotAutoRestart = False Then
@@ -1517,7 +1517,9 @@ nxt:        Next
                         End If
                     Next
                 End If
+            End If
 
+            If ParseJSON Or SegList(StreamIndex).Contains(".amp4?") Or SegList(StreamIndex).Contains(".f4v?") Then
                 If _loc_1(0) = &H1F And _loc_1(1) = &H8B Then
                     _loc_1 = UnZip(_loc_1, True)
                 End If
