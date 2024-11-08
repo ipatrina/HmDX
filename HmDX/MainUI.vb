@@ -2104,7 +2104,7 @@ nxt:        Next
     End Sub
 
     Public Function StringToBool(Input As String) As Boolean
-        If Input.StartsWith("1") Or Input.ToLower.StartsWith("t") Or Input.ToLower.StartsWith("y") Then
+        If Input.StartsWith("1", StringComparison.Ordinal) Or Input.ToLower.StartsWith("t", StringComparison.Ordinal) Or Input.ToLower.StartsWith("y", StringComparison.Ordinal) Then
             Return True
         Else
             Return False
