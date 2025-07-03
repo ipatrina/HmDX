@@ -1,8 +1,10 @@
 ﻿Imports System.IO
 Imports System.Security.Cryptography
 Imports System.Text
+Imports System.Text.RegularExpressions
 
-Public Class PLUGIN_DeYK
+Public Class PLUGIN_DeIQ
+    Dim BlockDecryptionKey As Byte() = New Byte() {}
     Dim DecryptionKey As Byte() = New Byte() {}
     Dim FileRead As MemoryStream
     Dim FileReader As BinaryReader
@@ -33,9 +35,20 @@ Public Class PLUGIN_DeYK
                     Dim PACKET_HEADER_BIT As New BitArray(PACKET_HEADER)
                     Dim PACKET_PID As Integer = (PACKET_HEADER(1) And &H1F) << 8 Or PACKET_HEADER(2)
 
+                    If PACKET_PID = 17 Then
+                        Dim SDT_PAYLOAD As Byte() = FileReader.ReadBytes(_loc_1)
+                        FileReader.BaseStream.Position -= _loc_1
+                        Dim _loc_11 As New StringBuilder()
+                        For Each _loc_12 As Byte In SDT_PAYLOAD
+                            If _loc_12 >= 32 AndAlso _loc_12 <= 126 Then _loc_11.Append(ChrW(_loc_12))
+                        Next
+                        Dim _loc_13 As MatchCollection = Regex.Matches(_loc_11.ToString(), "\|v([0-9a-fA-F]{32})\|")
+                        If _loc_13.Count > 0 Then BlockDecryptionKey = HexToBytes(_loc_13(0).Groups(1).Value)
+                    End If
+
                     Dim _loc_3 As Boolean = False
                     Dim _loc_4 As Boolean = False
-                    If PACKET_HEADER_BIT(14) And (PACKET_PID >= 32) And (PACKET_PID <= 1024) Then
+                    If PACKET_HEADER_BIT(14) And (PACKET_PID >= 32) And (PACKET_PID <= 256) Then
                         _loc_3 = True
                         _loc_4 = True
                         If PID_1 < 0 Then
@@ -77,6 +90,8 @@ Public Class PLUGIN_DeYK
                             PES_DATA = _loc_8
                         End If
 
+                        If BlockDecryptionKey.Length <> 16 Then Return InputStream
+
                         If PACKET_PID = PID_1 Then
                             If _loc_4 Then FlushData("PID_1")
                             PID_1_OFFSET.Add(Offset)
@@ -105,7 +120,7 @@ Public Class PLUGIN_DeYK
     Private Sub FlushData(PID As String)
         Try
             If PID = "PID_1" And PID_1_BUFFER.Length > 0 Then
-                Dim _loc_1 As Byte() = DecryptES(PID_1_PES_PAYLOAD, DecryptionKey)
+                Dim _loc_1 As Byte() = DecryptES(PID_1_PES_PAYLOAD, DecryptionKey, BlockDecryptionKey)
                 Dim _loc_2 As Integer = 0
                 Dim _loc_3 As Integer = 0
                 For Each _loc_4 In PID_1_OFFSET
@@ -120,7 +135,7 @@ Public Class PLUGIN_DeYK
                 PID_1_OFFSET.Clear()
                 PID_1_PES_PAYLOAD = New Byte() {}
             ElseIf PID = "PID_2" And PID_2_BUFFER.Length > 0 Then
-                Dim _loc_1 As Byte() = DecryptES(PID_2_PES_PAYLOAD, DecryptionKey)
+                Dim _loc_1 As Byte() = DecryptES(PID_2_PES_PAYLOAD, DecryptionKey, BlockDecryptionKey)
                 Dim _loc_2 As Integer = 0
                 Dim _loc_3 As Integer = 0
                 For Each _loc_4 In PID_2_OFFSET
@@ -140,19 +155,101 @@ Public Class PLUGIN_DeYK
         End Try
     End Sub
 
-    Private Function DecryptES(InputStream As Byte(), Key As Byte()) As Byte()
+    Public Function DecryptES(InputStream As Byte(), Key As Byte(), BlockKey As Byte()) As Byte()
         Dim _loc_1 As System.Security.Cryptography.Aes = System.Security.Cryptography.Aes.Create("AES")
         _loc_1.BlockSize = 128
-        _loc_1.KeySize = 128
         _loc_1.Key = Key
-        _loc_1.IV = Key
         _loc_1.Mode = CipherMode.ECB
         _loc_1.Padding = PaddingMode.None
-        Dim _loc_2 As ICryptoTransform = _loc_1.CreateDecryptor()
-        Dim _loc_3 As Integer = InputStream.Length - (InputStream.Length Mod 16)
-        Dim _loc_4 As Byte() = _loc_2.TransformFinalBlock(InputStream, 0, _loc_3)
-        Array.Copy(_loc_4, InputStream, _loc_4.Length)
-        Return InputStream
+
+        Dim _loc_2 As Byte() = New Byte(InputStream.Length - 1) {}
+        Array.Copy(InputStream, _loc_2, InputStream.Length)
+
+        Dim _loc_3 As Integer = -1
+        Dim _loc_4 As Integer = 0
+        While _loc_4 <= _loc_2.Length - 4
+            If _loc_2(_loc_4) = 0 AndAlso _loc_2(_loc_4 + 1) = 0 AndAlso _loc_2(_loc_4 + 2) = 0 AndAlso _loc_2(_loc_4 + 3) = 1 Then
+                If _loc_3 <> -1 Then
+                    Dim _loc_5 As Integer = _loc_4 - _loc_3
+                    Dim _loc_6(_loc_5 - 1) As Byte
+                    Array.Copy(_loc_2, _loc_3, _loc_6, 0, _loc_5)
+                    Dim _loc_7 As Byte() = DecryptNAL(_loc_6, BlockKey, _loc_1)
+                    Array.Copy(_loc_7, 0, _loc_2, _loc_3, _loc_5)
+                End If
+                _loc_3 = _loc_4
+                _loc_4 += 4
+            ElseIf _loc_2(_loc_4) = 0 AndAlso _loc_2(_loc_4 + 1) = 0 AndAlso _loc_2(_loc_4 + 2) = 1 Then
+                If _loc_3 <> -1 Then
+                    Dim _loc_5 As Integer = _loc_4 - _loc_3
+                    Dim _loc_6(_loc_5 - 1) As Byte
+                    Array.Copy(_loc_2, _loc_3, _loc_6, 0, _loc_5)
+                    Dim _loc_7 As Byte() = DecryptNAL(_loc_6, BlockKey, _loc_1)
+                    Array.Copy(_loc_7, 0, _loc_2, _loc_3, _loc_5)
+                End If
+                _loc_3 = _loc_4
+                _loc_4 += 3
+            Else
+                _loc_4 += 1
+            End If
+        End While
+        If _loc_3 <> -1 AndAlso _loc_3 < _loc_2.Length Then
+            Dim _loc_5 As Integer = _loc_2.Length - _loc_3
+            Dim _loc_6(_loc_5 - 1) As Byte
+            Array.Copy(_loc_2, _loc_3, _loc_6, 0, _loc_5)
+            Dim _loc_7 As Byte() = DecryptNAL(_loc_6, BlockKey, _loc_1)
+            Array.Copy(_loc_7, 0, _loc_2, _loc_3, _loc_5)
+        End If
+
+        Return _loc_2
+    End Function
+
+    Public Function DecryptNAL(InputStream As Byte(), BlockKey As Byte(), AesHandle As Aes) As Byte()
+        Dim _loc_11 As Byte() = New Byte(InputStream.Length - 1) {}
+        Array.Copy(InputStream, _loc_11, InputStream.Length)
+
+        Dim _loc_9(_loc_11.Length - 1) As Byte
+        Dim _loc_22 As Integer = 0
+        Dim _loc_23 As Integer = 0
+        While _loc_22 < _loc_11.Length
+            If _loc_22 + 3 < _loc_11.Length AndAlso _loc_11(_loc_22) = &H0 AndAlso _loc_11(_loc_22 + 1) = &H0 AndAlso _loc_11(_loc_22 + 2) = &H3 AndAlso (_loc_11(_loc_22 + 3) = &H0 OrElse _loc_11(_loc_22 + 3) = &H1 OrElse _loc_11(_loc_22 + 3) = &H2 OrElse _loc_11(_loc_22 + 3) = &H3) Then
+                _loc_9(_loc_23) = _loc_11(_loc_22) : _loc_23 += 1
+                _loc_9(_loc_23) = _loc_11(_loc_22 + 1) : _loc_23 += 1
+                _loc_9(_loc_23) = _loc_11(_loc_22 + 3) : _loc_23 += 1
+                _loc_22 += 4
+            Else
+                _loc_9(_loc_23) = _loc_11(_loc_22)
+                _loc_22 += 1
+                _loc_23 += 1
+            End If
+        End While
+
+        Dim _loc_12 As Byte() = New Byte(_loc_23 - 5 - 2 - 1) {}
+        Array.Copy(_loc_9, 5, _loc_12, 0, _loc_12.Length)
+
+        Dim _loc_13 As Integer = Math.Ceiling(_loc_12.Length / 16)
+        Dim _loc_14 As Integer = 0
+        For _loc_15 As Integer = 1 To _loc_13
+            Dim _loc_16 As Byte() = BitConverter.GetBytes(_loc_15)
+            If BitConverter.IsLittleEndian Then Array.Reverse(_loc_16)
+            Dim _loc_17 As Byte() = BlockKey.Take(12).Concat(_loc_16).ToArray()
+            If _loc_15 Mod 10 = 1 Or _loc_15 = _loc_13 Then _loc_17 = AesHandle.CreateEncryptor().TransformFinalBlock(_loc_17, 0, _loc_17.Length)
+            For _loc_18 As Integer = 0 To _loc_17.Length - 1
+                _loc_12(_loc_14) = _loc_12(_loc_14) Xor _loc_17(_loc_18)
+                _loc_14 += 1
+                If _loc_14 = _loc_12.Length Then Exit For
+            Next
+        Next
+
+        Array.Copy(_loc_12, 0, _loc_11, 5, _loc_12.Length)
+        Array.Copy(_loc_9, 5 + _loc_12.Length, _loc_11, 5 + _loc_12.Length, 2)
+        Dim _loc_10 As Integer = _loc_11.Length - 5 - _loc_12.Length - 2
+        If _loc_10 > 0 Then
+            For _loc_19 As Integer = 1 To _loc_10
+                _loc_11(_loc_11.Length - _loc_10) = 0
+            Next
+        End If
+
+        Return _loc_11
     End Function
 
     Public Shared Function HexToBytes(param1 As String) As Byte()

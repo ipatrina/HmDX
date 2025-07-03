@@ -102,6 +102,7 @@ Public Class MainUI
     Public Shared ParentURL As String = ""
     Public Shared ParseJSON As Boolean = False
     Public Shared PauseNow As Boolean = False
+    Public Shared PLUGIN_DeIQ As String = ""
     Public Shared PLUGIN_DeYK As String = ""
     Public Shared PLUGIN_ThousandBillion As Boolean = False
     Public Shared PostExecution As String = ""
@@ -548,13 +549,6 @@ Public Class MainUI
                 "新时代需要新担当 新征程要有新作为",
                 "新思想引领新时代 新征程激发新责任",
                 "汲取中国智慧 弘扬中国精神 传播中国价值",
-                "严打黑恶犯罪 弘扬社会正气",
-                "有黑扫黑 无黑除恶 无恶治乱",
-                "有黑必扫 有恶必除 有伞必打",
-                "有腐必反 有乱必治 除恶务尽",
-                "依法严惩黑恶势力 维护社会和谐稳定",
-                "依法严厉打击黑恶势力违法犯罪",
-                "重拳出击扫黑除恶 依法严惩违法犯罪",
                 "党在我心中 永远跟党走",
                 "坚持和平发展道路 推动构建人类命运共同体",
                 "坚定文化自信 推动社会主义文化繁荣兴盛",
@@ -1577,11 +1571,25 @@ nxt:        Next
                 WriteLog("[Segment " & StreamIndex & "] Decrypted.")
             End If
 
+            If Not PLUGIN_DeIQ = "" Then
+                If Not PLUGIN_DeIQ.Length = 32 Then
+                    Try
+                        PLUGIN_DeIQ = BytesToHex(Convert.FromBase64String(PLUGIN_DeIQ.Trim().Replace(Chr(34), "")))
+                    Catch ex As Exception
+                        PLUGIN_DeIQ = PLUGIN_DeIQ.Trim().Replace(" ", "").ToUpper
+                    End Try
+                End If
+                If PLUGIN_DeIQ.Length = 32 Then
+                    WriteLog("[Segment " & StreamIndex & "] [DeIQ] Key=0x" & PLUGIN_DeIQ)
+                    _loc_1 = New PLUGIN_DeIQ().DecryptTS(_loc_1, PLUGIN_DeIQ.Trim())
+                End If
+            End If
+
             If Not PLUGIN_DeYK = "" And IgnoreYouku = False Then
                 If PLUGIN_DeYK.Contains(",") Then
                     Dim _loc_4 As String = ""
                     For Each _loc_5 In PLUGIN_DeYK.Replace("，", ",").Replace("{", "").Replace("}", "").Replace("[", "").Replace("]", "").Replace(" ", "").Split(",")
-                        Dim _loc_6 As String = Hex(Int(_loc_5.Trim))
+                        Dim _loc_6 As String = Hex(Int(_loc_5.Trim()))
                         If _loc_6.Length = 1 Then _loc_4 += "0"
                         _loc_4 += _loc_6
                     Next
@@ -1589,15 +1597,15 @@ nxt:        Next
                 Else
                     If Not PLUGIN_DeYK.Length = 32 Then
                         Try
-                            PLUGIN_DeYK = BytesToHex(Convert.FromBase64String(PLUGIN_DeYK.Trim.Replace(Chr(34), "")))
+                            PLUGIN_DeYK = BytesToHex(Convert.FromBase64String(PLUGIN_DeYK.Trim().Replace(Chr(34), "")))
                         Catch ex As Exception
-                            PLUGIN_DeYK = PLUGIN_DeYK.Trim.Replace(" ", "").ToUpper
+                            PLUGIN_DeYK = PLUGIN_DeYK.Trim().Replace(" ", "").ToUpper
                         End Try
                     End If
                 End If
                 If PLUGIN_DeYK.Length = 32 Then
                     WriteLog("[Segment " & StreamIndex & "] [DeYK] Key=0x" & PLUGIN_DeYK)
-                    _loc_1 = New PLUGIN_DeYK().DecryptData(_loc_1, PLUGIN_DeYK.Trim)
+                    _loc_1 = New PLUGIN_DeYK().DecryptTS(_loc_1, PLUGIN_DeYK.Trim())
                 End If
             End If
 
@@ -1649,7 +1657,7 @@ nxt:        Next
                     Dim FLength1 As Long = New FileInfo(FirstPassPath).Length
                     Dim FLength2 As Long = New FileInfo(TempPath).Length
                     If FLength1 = FLength2 Then          'Second pass matched
-                        WriteLog("[2-Pass verification succeed] File matched. Size: " & Math.Round(FLength1 / 1048576, 2) & " MB")
+                        WriteLog("[2-Pass verification success] File matched. Size: " & Math.Round(FLength1 / 1048576, 2) & " MB")
                         Comb()
                     Else                               'Third pass required
                         WriteLog("[2-Pass verification failure] Pass 1: " & Math.Round(FLength1 / 1048576, 2) & " MB, Pass 2: " & Math.Round(FLength2 / 1048576, 2) & " MB.")
@@ -1971,6 +1979,11 @@ nxt:        Next
                         Proxy = Value
                     ElseIf Item = "skip" Then
                         Skip = Value
+                    ElseIf Item = "deiq" Then
+                        If Not Value = "" Then
+                            PLUGIN_DeIQ = Value
+                            IgnoreKey = True
+                        End If
                     ElseIf Item = "deyk" Then
                         If Not Value = "" Then
                             PLUGIN_DeYK = Value

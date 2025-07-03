@@ -114,6 +114,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="PLUGIN_DeIQ.vb" />
     <Compile Include="PLUGIN_DeYK.vb" />
     <Compile Include="PLUGIN_ForWebAppAPI.vb" />
     <Compile Include="PLUGIN_LEM3U8Descrambler.vb" />

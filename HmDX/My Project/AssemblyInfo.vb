@@ -12,7 +12,7 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyDescription("HLS/m3u8 Downloader X")>
 <Assembly: AssemblyCompany("")>
 <Assembly: AssemblyProduct("")>
-<Assembly: AssemblyCopyright("© 2018-2024 HmDX 版权所有")>
+<Assembly: AssemblyCopyright("© 2018-2025 HmDX 版权所有")>
 <Assembly: AssemblyTrademark("")>
 
 <Assembly: ComVisible(False)>
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' 方法是按如下所示使用“*”: :
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("5.7.8.2411")>
-<Assembly: AssemblyFileVersion("5.7.8.2411")>
+<Assembly: AssemblyVersion("5.8.0.2507")>
+<Assembly: AssemblyFileVersion("5.8.0.2507")>
