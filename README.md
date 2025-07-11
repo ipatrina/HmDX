@@ -33,6 +33,14 @@ HLS/m3u8 Downloader X (HmDX) 是一款M3U8网络视频下载工具。
 
 # 更新日志
 
+**5.8.1 (2025/07/11)**
+
+1.增加"ProxyUsername"和"ProxyPassword"附加选项，可指定HTTP代理用户名和密码。
+
+示例用法："Proxy>http://12.34.56.78:8080|ProxyUsername>squid|ProxyPassword>12345678"。
+
+---
+
 **5.8.0 (2025/07/01)**
 
 1.增加爱奇艺视频Marlin DRM解扰插件《DeIQ》。
