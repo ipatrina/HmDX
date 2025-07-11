@@ -109,6 +109,8 @@ Public Class MainUI
     Public Shared PostExecutionArguments As String = ""
     Public Shared ProgramDateTimeList As New List(Of String)
     Public Shared Proxy As String = ""
+    Public Shared ProxyPassword As String = ""
+    Public Shared ProxyUsername As String = ""
     Public Shared RangeList As New List(Of String)
     Public Shared RecentRedirect As String = ""
     Public Shared RedoSetOption As Boolean = False
@@ -1977,6 +1979,10 @@ nxt:        Next
                         Host = Value
                     ElseIf Item = "proxy" Then
                         Proxy = Value
+                    ElseIf Item = "proxyusername" Then
+                        ProxyUsername = Value
+                    ElseIf Item = "proxypassword" Then
+                        ProxyPassword = Value
                     ElseIf Item = "skip" Then
                         Skip = Value
                     ElseIf Item = "deiq" Then
@@ -2247,7 +2253,11 @@ nxt:        Next
             If NoProxy Then
                 httpReq.Proxy = New WebProxy()
             ElseIf Not Proxy = "" Then
-                httpReq.Proxy = New WebProxy(Proxy, False) With {.Credentials = System.Net.CredentialCache.DefaultCredentials}
+                If Not ProxyUsername = "" And Not ProxyPassword = "" Then
+                    httpReq.Proxy = New WebProxy(Proxy, False) With {.Credentials = New NetworkCredential(ProxyUsername, ProxyPassword)}
+                Else
+                    httpReq.Proxy = New WebProxy(Proxy, False) With {.Credentials = System.Net.CredentialCache.DefaultCredentials}
+                End If
             End If
 
             If StreamIndex >= 0 Then
